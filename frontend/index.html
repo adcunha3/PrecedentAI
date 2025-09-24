@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrecedentAI - Legal Research Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .search-section {
+            padding: 40px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .case-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .case-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .case-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .case-summary {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .case-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .case-meta span {
+            background: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .summary-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .summary-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .summary-content {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .search-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PrecedentAI</h1>
+            <p>AI-Powered Legal Research Assistant</p>
+        </div>
+        
+        <div class="search-section">
+            <form class="search-form" id="searchForm">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput" 
+                    placeholder="Enter your legal question (e.g., 'self defense home invasion')"
+                    required
+                >
+                <button type="submit" class="search-btn" id="searchBtn">
+                    Search Cases
+                </button>
+            </form>
+            
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Searching legal cases and generating AI analysis...</p>
+            </div>
+            
+            <div id="results" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        
+        const searchForm = document.getElementById('searchForm');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const query = searchInput.value.trim();
+            if (!query) return;
+            
+            // Show loading state
+            loading.style.display = 'block';
+            results.innerHTML = '';
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Searching...';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResults(data);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                displayError('Failed to search. Please check if the server is running on localhost:8000');
+            } finally {
+                // Hide loading state
+                loading.style.display = 'none';
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search Cases';
+            }
+        });
+
+        function displayResults(data) {
+            if (!data.is_valid) {
+                results.innerHTML = `
+                    <div class="no-results">
+                        <h3>Invalid Query</h3>
+                        <p>Please enter a valid legal question.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!data.cases || data.cases.length === 0) {
+                results.innerHTML = `
+                    <div class="no-results">
+                        <h3>No Cases Found</h3>
+                        <p>No legal cases were found for your query.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<h2 style="margin-bottom: 20px; color: #2c3e50;">Found Legal Cases</h2>';
+            
+            // Display cases
+            data.cases.forEach((case_, index) => {
+                html += `
+                    <div class="case-card">
+                        <div class="case-title">${case_.case_name}</div>
+                        <div class="case-summary">${case_.summary.substring(0, 300)}${case_.summary.length > 300 ? '...' : ''}</div>
+                        <div class="case-meta">
+                            <span>Confidence: ${(case_.confidence * 100).toFixed(1)}%</span>
+                            <span>Jurisdiction: ${case_.jurisdiction}</span>
+                            <span>Court: ${case_.court || 'Unknown'}</span>
+                            ${case_.year ? `<span>Year: ${case_.year}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Display AI summary
+            if (data.web_summary && data.web_summary.summary) {
+                html += `
+                    <div class="summary-section">
+                        <div class="summary-title">AI Analysis</div>
+                        <div class="summary-content">${data.web_summary.summary}</div>
+                    </div>
+                `;
+            }
+
+            results.innerHTML = html;
+        }
+
+        function displayError(message) {
+            results.innerHTML = `
+                <div class="error">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Add some example queries
+        const exampleQueries = [
+            'self defense home invasion',
+            'contract breach damages',
+            'employment discrimination',
+            'medical malpractice',
+            'intellectual property theft'
+        ];
+
+        // Add example buttons
+        const exampleSection = document.createElement('div');
+        exampleSection.innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #2c3e50; margin-bottom: 10px;">Example Queries:</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    ${exampleQueries.map(query => 
+                        `<button onclick="searchInput.value='${query}'; searchForm.dispatchEvent(new Event('submit'))" 
+                         style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; color: #495057;">
+                            ${query}
+                         </button>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+        
+        searchForm.parentNode.insertBefore(exampleSection, searchForm.nextSibling);
+    </script>
+</body>
+</html>
