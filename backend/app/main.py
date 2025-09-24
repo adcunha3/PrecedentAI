@@ -4,8 +4,6 @@ import uvicorn
 from app.services.orchestration.search_orchestration import SearchOrchestrator
 from app.schemas.search import SearchQuery, SearchResponse
 from fastapi import Request, HTTPException
-from fastapi_limiter import FastAPILimiter
-from fastapi_limiter.depends import RateLimiter
 
 # Create FastAPI instance
 app = FastAPI(
@@ -33,8 +31,8 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+
 @app.post("/search", response_model=SearchResponse)
-@limiter.limit("5/hour")  # Allow 5 requests per hour per IP
 async def search_papers(request: Request, query: SearchQuery):
     """
     Search endpoint that combines academic papers and web results
@@ -54,7 +52,7 @@ async def search_papers(request: Request, query: SearchQuery):
 
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
+        "app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True
