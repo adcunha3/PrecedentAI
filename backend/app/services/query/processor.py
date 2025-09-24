@@ -2,15 +2,17 @@ import json
 from typing import Optional
 from app.schemas.query_processing import ProcessedQuery, ProcessedQueryLLM
 from openai import AsyncOpenAI
+from app.config import settings
 
 class QueryProcessor:
     """Simplified processor for PrecedentAI queries."""
 
     def __init__(self):
-        self.client = AsyncOpenAI()
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
     async def process_query(self, user_query: str) -> ProcessedQuery:
         """Send query to LLM and return a structured ProcessedQuery."""
+        print(f"QUERY PROCESSOR: Processing query: {user_query}")
 
         prompt = f"""
         You are a legal research assistant.
@@ -26,27 +28,42 @@ class QueryProcessor:
         }}
         """
 
-        # Call the LLM
-        response = await self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a legal research assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0
-        )
-
-        raw_output = response.choices[0].message.content.strip()
-
-        # Parse JSON
         try:
-            data = json.loads(raw_output)
-            processed_result = ProcessedQueryLLM(
-                is_valid=data.get("is_valid", False),
-                legal_term=data.get("legal_term")
+            # Call the LLM
+            response = await self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a legal research assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0
             )
-        except json.JSONDecodeError:
-            processed_result = ProcessedQueryLLM(is_valid=False)
+
+            raw_output = response.choices[0].message.content.strip()
+            print(f"QUERY PROCESSOR: OpenAI response: {raw_output}")
+
+            # Parse JSON
+            try:
+                data = json.loads(raw_output)
+                processed_result = ProcessedQueryLLM(
+                    is_valid=data.get("is_valid", False),
+                    legal_term=data.get("legal_term")
+                )
+                print(f"QUERY PROCESSOR: Parsed result - Valid: {processed_result.is_valid}, Term: {processed_result.legal_term}")
+            except json.JSONDecodeError:
+                print("QUERY PROCESSOR: JSON decode error, using fallback")
+                processed_result = ProcessedQueryLLM(is_valid=False)
+
+        except Exception as e:
+            print(f"QUERY PROCESSOR: Error in query processing: {e}")
+            # Fallback to simple validation
+            legal_terms = ['law', 'legal', 'court', 'case', 'contract', 'tort', 'criminal', 'civil', 'constitutional']
+            is_valid = any(term in user_query.lower() for term in legal_terms)
+            processed_result = ProcessedQueryLLM(
+                is_valid=is_valid,
+                legal_term=user_query if is_valid else None
+            )
+            print(f"QUERY PROCESSOR: Fallback validation - Valid: {is_valid}")
 
         # Return wrapped ProcessedQuery
         return ProcessedQuery(
