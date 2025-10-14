@@ -7,7 +7,7 @@ class SearchQuery(BaseModel):
     """User query wrapper"""
     query: str
 
-
+# A list of LegalCases from CourtListener API
 class LegalCase(BaseModel):
     """Lightweight case representation for search results"""
     case_name: str

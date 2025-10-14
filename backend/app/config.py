@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
     PINECONE_API_KEY: str
     PINECONE_INDEX: str
-    COURTLISTENER_API_KEY: str = ""  # Optional - CourtListener API key
+    COURTLISTENER_API_KEY: str = ""
     CORS_ORIGINS: Union[str, List[str]] = ["*"]
 
     @field_validator('CORS_ORIGINS', mode='before')

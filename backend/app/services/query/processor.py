@@ -12,7 +12,6 @@ class QueryProcessor:
 
     async def process_query(self, user_query: str) -> ProcessedQuery:
         """Send query to LLM and return a structured ProcessedQuery."""
-        print(f"QUERY PROCESSOR: Processing query: {user_query}")
 
         prompt = f"""
         You are a legal research assistant.
@@ -29,7 +28,6 @@ class QueryProcessor:
         """
 
         try:
-            # Call the LLM
             response = await self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -40,34 +38,25 @@ class QueryProcessor:
             )
 
             raw_output = response.choices[0].message.content.strip()
-            print(f"QUERY PROCESSOR: OpenAI response: {raw_output}")
 
-            # Parse JSON
             try:
                 data = json.loads(raw_output)
                 processed_result = ProcessedQueryLLM(
                     is_valid=data.get("is_valid", False),
                     legal_term=data.get("legal_term")
                 )
-                print(f"QUERY PROCESSOR: Parsed result - Valid: {processed_result.is_valid}, Term: {processed_result.legal_term}")
             except json.JSONDecodeError:
-                print("QUERY PROCESSOR: JSON decode error, using fallback")
                 processed_result = ProcessedQueryLLM(is_valid=False)
 
         except Exception as e:
-            print(f"QUERY PROCESSOR: Error in query processing: {e}")
-            # Fallback to simple validation
-            legal_terms = ['law', 'legal', 'court', 'case', 'contract', 'tort', 'criminal', 'civil', 'constitutional']
-            is_valid = any(term in user_query.lower() for term in legal_terms)
             processed_result = ProcessedQueryLLM(
-                is_valid=is_valid,
-                legal_term=user_query if is_valid else None
+                is_valid=False,
+                legal_term=None
             )
-            print(f"QUERY PROCESSOR: Fallback validation - Valid: {is_valid}")
-
-        # Return wrapped ProcessedQuery
         return ProcessedQuery(
             original_query=user_query,
             processed_result=processed_result,
             processing_time=0
         )
+
+# TODO: Preprocess the query to remove stop words and other noise

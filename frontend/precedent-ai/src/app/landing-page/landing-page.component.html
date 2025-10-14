@@ -1,0 +1,30 @@
+<div>
+  <input [(ngModel)]="searchQuery" placeholder="Enter search query">
+  <button (click)="onSearch()" [disabled]="isLoading">
+    {{ isLoading ? 'Searching...' : 'Search' }}
+  </button>
+</div>
+
+<div *ngIf="isLoading">Loading...</div>
+
+<div *ngIf="caseSummary">
+  <h3>Overall Summary</h3>
+  <p>{{ caseSummary.summary }}</p>
+</div>
+
+<div *ngIf="cases.length > 0">
+  <h3>Cases with AI Summaries</h3>
+  <div *ngFor="let case of cases; let i = index">
+    <div class="case-card">
+      <h4>{{ case.case_name }}</h4>
+      <p><strong>Court:</strong> {{ case.court || 'Unknown' }} | <strong>Year:</strong> {{ case.year || 'Unknown' }}</p>
+      <p><strong>Original Summary:</strong> {{ case.summary }}</p>
+      
+      <!-- Show corresponding AI-generated finding summary -->
+      <div *ngIf="caseSummary && caseSummary.findings[i]" class="ai-summary">
+        <h5>AI Summary:</h5>
+        <p>{{ caseSummary.findings[i].text }}</p>
+      </div>
+    </div>
+  </div>
+</div>

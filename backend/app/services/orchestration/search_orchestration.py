@@ -14,31 +14,22 @@ class SearchOrchestrator:
         self.llm_service = LLMService()
     
     async def search(self, query: str) -> SearchResponse:
-        print(f"SEARCH ORCHESTRATOR: Starting search for: {query}")
-        
-        # 1. Process query
+        # Process the query for legal terms
         processed = await self.query_processor.process_query(query)
-        print(f"SEARCH ORCHESTRATOR: Query processed - Valid: {processed.processed_result.is_valid}")
         
-        if not processed.processed_result.is_valid:
-            print("SEARCH ORCHESTRATOR: Query invalid, returning empty response")
+        if not processed.processed_result.is_valid or not processed.processed_result.legal_term:
             return SearchResponse(
                 is_valid=False,
                 cases=[],
                 web_summary=None
             )
         
-        # Use the original query if legal_term is None
-        search_term = processed.processed_result.legal_term or query
-        print(f"SEARCH ORCHESTRATOR: Using search term: {search_term}")
-        
-        # 2. Fetch academic/legal cases
-        academic_results = await self.search_pipeline.search(search_term)
-        print(f"SEARCH ORCHESTRATOR: Retrieved {len(academic_results)} cases from pipeline")
-        
-        # 3. Convert to LegalCase objects
-        cases: List[LegalCase] = [
-            LegalCase(
+        legal_term = processed.processed_result.legal_term
+        academic_results = await self.search_pipeline.search(legal_term=legal_term, original_query=query)
+
+        cases = []
+        for paper in academic_results:
+            case = LegalCase(
                 case_name=paper.get('title', 'Unknown Case'),
                 summary=paper.get('summary', '')[:500] + "..." if len(paper.get('summary', '')) > 500 else paper.get('summary', ''),
                 url=paper.get('url', ''),
@@ -50,14 +41,9 @@ class SearchOrchestrator:
                 legal_topics=paper.get('legal_topics', []),
                 docket_number=paper.get('docket_number')
             )
-            for paper in academic_results
-        ]
+            cases.append(case)
         
-        # 4. Generate LLM summary of the cases
-        summary: CaseSummary = await self.llm_service.generate_summary(
-            query=query,
-            cases=cases
-        )
+        summary = await self.llm_service.generate_summary(query, cases)
         
         return SearchResponse(
             is_valid=True,

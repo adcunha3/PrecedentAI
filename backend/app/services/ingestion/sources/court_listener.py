@@ -14,7 +14,6 @@ class CourtListenerConnector:
             return []
 
         if not settings.COURTLISTENER_API_KEY:
-            print("No CourtListener API key provided.")
             return []
 
         import ssl
@@ -29,14 +28,13 @@ class CourtListenerConnector:
 
         async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
             params = {
-                "q": query,  # NOTE: for /search/, it’s `q`, not `search`
+                "q": query,
                 "page_size": min(max_results, 100),
             }
 
             try:
                 async with session.get(self.BASE_URL, params=params) as response:
                     if response.status != 200:
-                        print(f"Error {response.status}: {await response.text()}")
                         return []
 
                     data = await response.json()
@@ -58,7 +56,6 @@ class CourtListenerConnector:
                         cases.append(case)
 
             except Exception as e:
-                print(f"Exception fetching cases: {e}")
                 return []
 
         return cases
