@@ -1,6 +1,6 @@
 from typing import List
 from openai import AsyncOpenAI
-from app.schemas.case_summary import CaseSummary
+from app.schemas.case_summary import CaseSummary, CaseFinding
 from app.schemas.search import LegalCase
 from app.config import settings
 
@@ -19,76 +19,46 @@ class LLMService:
                 error="No cases to analyze"
             )
         
-        # Prepare context from cases
-        context = "\n".join([
-            f"Title: {case.case_name}\nSummary: {case.summary}\nURL: {case.url}" 
-            for case in cases
-        ])
+        # Create findings for each case
+        findings = self._create_findings_from_cases(cases)
         
+        # Generate overall summary from the findings
+        overall_summary = await self._generate_overall_summary(query, findings)
+        
+        return CaseSummary(
+            summary=overall_summary,
+            findings=findings,
+            error=None
+        )
+    
+    def _create_findings_from_cases(self, cases: List[LegalCase]) -> List[CaseFinding]:
+        """Create CaseFinding objects from each case"""
+        findings = []
+        for case in cases[:3]:  # Limit to first 3 cases
+            finding = CaseFinding(
+                title=f"Case: {case.case_name}",
+                text=case.summary[:200] + "..." if len(case.summary) > 200 else case.summary,
+                source_url=case.url,
+                court=case.court or "Unknown Court",
+                decision_date=str(case.year) if case.year else "Unknown"
+            )
+            findings.append(finding)
+        return findings
+    
+    async def _generate_overall_summary(self, query: str, findings: List[CaseFinding]) -> str:
+        """Generate overall summary from findings using LLM"""
         messages = [
-            {"role": "system", "content": """
-            You are a factual research assistant focused on legal cases.
-            Analyze the provided cases and generate a structured summary with:
-            1. Key findings
-            2. Specific claims, titles, and sources
-            """},
-            {"role": "user", "content": f"""
-            Research Query: {query}
-
-            Cases:
-            {context}
-
-            Generate a research summary highlighting key insights and sources.
-            """}
+            {"role": "system", "content": "You are a legal research assistant. Provide a concise summary of the key findings."},
+            {"role": "user", "content": f"Query: {query}\n\nProvide a summary of the key legal findings from the {len(findings)} cases found."}
         ]
         
         try:
-            # Try structured output first
-            completion = await self.client.beta.chat.completions.parse(
+            response = await self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=messages,
-                response_format=CaseSummary
+                temperature=0
             )
-            return completion.choices[0].message.parsed
-        
-        except Exception as e:
-            try:
-                # Fallback to regular completion
-                response = await self.client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=messages,
-                    temperature=0
-                )
-                
-                # Parse the response manually
-                content = response.choices[0].message.content
-                return CaseSummary(
-                    summary=content[:500] + "..." if len(content) > 500 else content,
-                    findings=[
-                        {
-                            "title": f"Case: {case.case_name}",
-                            "text": case.summary[:200] + "...",
-                            "source_url": case.url,
-                            "court": case.court or "Unknown Court",
-                            "decision_date": str(case.year) if case.year else "Unknown"
-                        }
-                        for case in cases[:3]  # Limit to first 3 cases
-                    ],
-                    error=None
-                )
-            except Exception as e2:
-                # Final fallback to simple summary
-                return CaseSummary(
-                    summary=f"Summary for query: {query}. Found {len(cases)} relevant cases.",
-                    findings=[
-                        {
-                            "title": f"Case: {case.case_name}",
-                            "text": case.summary[:200] + "...",
-                            "source_url": case.url,
-                            "court": case.court or "Unknown Court",
-                            "decision_date": str(case.year) if case.year else "Unknown"
-                        }
-                        for case in cases[:3]  # Limit to first 3 cases
-                    ],
-                    error=None
-                )
+            return response.choices[0].message.content
+        except Exception:
+            # Fallback to simple summary
+            return f"Found {len(findings)} relevant cases for: {query}"

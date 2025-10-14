@@ -1,12 +1,11 @@
-from langchain_openai import OpenAIEmbeddings
-from app.config import settings
+from sentence_transformers import SentenceTransformer
+from typing import List
 
 class EmbeddingService:
     def __init__(self):
-        self.embeddings = OpenAIEmbeddings(
-            api_key=settings.OPENAI_API_KEY,
-            model="text-embedding-3-small"
-        )
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.dimension = 384
     
-    def get_embedding(self, text: str) -> list[float]:
-        return self.embeddings.embed_query(text)
+    def get_embedding(self, text: str) -> List[float]:
+        embeddings = self.model.encode(text)
+        return embeddings.tolist()
