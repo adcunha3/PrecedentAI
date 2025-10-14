@@ -12,11 +12,7 @@ class LLMService:
         
     async def generate_summary(self, query: str, cases: List[LegalCase]) -> CaseSummary:
         """Generate a research summary from cases"""
-        print(f"LLM SERVICE: Generating summary for query: {query}")
-        print(f"LLM SERVICE: Processing {len(cases)} cases")
-        
         if not cases:
-            print("LLM SERVICE: No cases available, returning empty summary")
             return CaseSummary(
                 summary="No cases available.",
                 findings=[],
@@ -28,7 +24,6 @@ class LLMService:
             f"Title: {case.case_name}\nSummary: {case.summary}\nURL: {case.url}" 
             for case in cases
         ])
-        print(f"LLM SERVICE: Context length: {len(context)} characters")
         
         messages = [
             {"role": "system", "content": """
@@ -57,7 +52,6 @@ class LLMService:
             return completion.choices[0].message.parsed
         
         except Exception as e:
-            print(f"Error with structured output, trying regular completion: {e}")
             try:
                 # Fallback to regular completion
                 response = await self.client.chat.completions.create(
@@ -83,7 +77,6 @@ class LLMService:
                     error=None
                 )
             except Exception as e2:
-                print(f"Error with regular completion: {e2}")
                 # Final fallback to simple summary
                 return CaseSummary(
                     summary=f"Summary for query: {query}. Found {len(cases)} relevant cases.",
