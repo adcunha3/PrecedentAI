@@ -58,3 +58,5 @@ class QueryProcessor:
             processed_result=processed_result,
             processing_time=0
         )
+
+# TODO: Preprocess the query to remove stop words and other noise

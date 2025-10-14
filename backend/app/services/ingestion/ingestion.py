@@ -40,3 +40,5 @@ class CaseIngestionService:
             })
 
         self.index.upsert(vectors=vectors)
+
+# TODO: Implement batch ingestion for larger datasets with retry logic
